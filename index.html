@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiosk Samoobsługowy</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        /* Customowe style dla paska przewijania (ukrycie) */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Płynne przejścia Vue */
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.5s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+        .slide-up-enter-active, .slide-up-leave-active { transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        .slide-up-enter-from, .slide-up-leave-to { transform: translateY(100%); opacity: 0; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+            -webkit-user-select: none; /* Zapobiega zaznaczaniu tekstu jak w kiosku */
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden bg-gray-100 text-gray-800">
+
+    <div id="app" class="h-full w-full relative">
+
+        <transition name="fade">
+            <div v-if="screen === 'welcome'" 
+                 class="absolute inset-0 z-50 bg-yellow-400 flex flex-col items-center justify-center cursor-pointer"
+                 @click="startOrder">
+                <div class="animate__animated animate__bounceIn">
+                    <i class="fas fa-hamburger text-9xl text-red-600 mb-8 drop-shadow-xl"></i>
+                </div>
+                <h1 class="text-6xl font-black text-red-600 mb-4 tracking-tighter uppercase animate__animated animate__pulse animate__infinite">Zamów Tutaj</h1>
+                <p class="text-2xl font-bold text-red-700 opacity-80 mt-4">Dotknij ekranu, aby rozpocząć</p>
+                <div class="absolute bottom-10 text-red-600 font-semibold opacity-60">Wersja demonstracyjna</div>
+            </div>
+        </transition>
+
+        <div v-if="screen === 'menu' || screen === 'checkout'" class="h-full flex flex-col">
+            
+            <header class="h-20 bg-white shadow-md flex items-center justify-between px-8 z-20 shrink-0">
+                <div class="flex items-center space-x-4">
+                    <button v-if="screen === 'menu'" @click="screen = 'welcome'" class="text-gray-400 hover:text-red-500 transition">
+                        <i class="fas fa-arrow-left text-3xl"></i>
+                    </button>
+                    <div class="text-3xl font-bold text-yellow-500 tracking-tighter">FAST<span class="text-red-600">FOOD</span></div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="bg-green-100 text-green-700 px-4 py-2 rounded-full font-bold text-sm">Na miejscu</span>
+                </div>
+            </header>
+
+            <div class="flex-1 flex overflow-hidden relative">
+                
+                <nav class="w-1/4 bg-white border-r border-gray-200 h-full overflow-y-auto no-scrollbar py-6">
+                    <div v-for="cat in categories" :key="cat.id" 
+                         @click="selectCategory(cat.id)"
+                         :class="['flex flex-col items-center justify-center py-8 mx-4 mb-4 rounded-2xl cursor-pointer transition-all duration-300 transform', 
+                                  activeCategory === cat.id ? 'bg-red-600 text-white shadow-lg scale-105' : 'bg-gray-50 text-gray-500 hover:bg-gray-100']">
+                        <i :class="[cat.icon, 'text-4xl mb-3']"></i>
+                        <span class="text-xl font-bold">{{ cat.name }}</span>
+                    </div>
+                </nav>
+
+                <main class="w-3/4 p-6 overflow-y-auto bg-gray-100 no-scrollbar pb-32">
+                    <h2 class="text-4xl font-black text-gray-800 mb-8 animate__animated animate__fadeInLeft">{{ getCategoryName(activeCategory) }}</h2>
+                    
+                    <div class="grid grid-cols-2 gap-6">
+                        <div v-for="product in filteredProducts" :key="product.id" 
+                             @click="openProductModal(product)"
+                             class="bg-white p-6 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer animate__animated animate__fadeInUp">
+                            <div class="h-40 bg-gray-100 rounded-2xl mb-4 flex items-center justify-center overflow-hidden relative">
+                                <div class="absolute inset-0 flex items-center justify-center text-6xl text-gray-300">
+                                    <i :class="product.icon"></i>
+                                </div>
+                                <img v-if="product.img" :src="product.img" class="w-full h-full object-cover relative z-10" alt="">
+                            </div>
+                            <div class="flex justify-between items-end">
+                                <div>
+                                    <h3 class="text-2xl font-bold text-gray-800 leading-tight mb-1">{{ product.name }}</h3>
+                                    <p class="text-gray-400 text-sm mb-2">{{ product.kcal }} kcal</p>
+                                </div>
+                                <span class="text-3xl font-black text-red-600">{{ product.price.toFixed(2) }} zł</span>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+
+            <div class="h-24 bg-white border-t border-gray-200 flex items-center justify-between px-8 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-30 shrink-0 relative">
+                <div class="flex flex-col">
+                    <span class="text-gray-500 font-semibold uppercase text-sm">Twoje zamówienie</span>
+                    <span class="text-4xl font-black text-gray-800">{{ cartTotal.toFixed(2) }} zł</span>
+                </div>
+                
+                <button @click="toggleCart" 
+                        class="bg-yellow-400 text-red-900 px-12 py-4 rounded-2xl font-black text-2xl shadow-lg hover:bg-yellow-300 active:scale-95 transition-all flex items-center gap-4">
+                    <span>Mój Koszyk</span>
+                    <span class="bg-red-600 text-white w-10 h-10 rounded-full flex items-center justify-center text-lg">{{ cartCount }}</span>
+                </button>
+            </div>
+        </div>
+
+        <transition name="slide-up">
+            <div v-if="selectedProduct" class="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" @click.self="closeModal">
+                <div class="bg-white w-full max-w-2xl h-[85vh] rounded-t-[3rem] p-8 flex flex-col shadow-2xl relative overflow-hidden">
+                    
+                    <button @click="closeModal" class="absolute top-6 right-6 bg-gray-100 w-12 h-12 rounded-full flex items-center justify-center hover:bg-gray-200 transition z-20">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+
+                    <div class="overflow-y-auto no-scrollbar flex-1 pb-20">
+                        <div class="flex flex-col items-center mb-8 mt-4">
+                             <div class="w-64 h-64 bg-yellow-100 rounded-full flex items-center justify-center text-9xl text-yellow-500 mb-6 shadow-inner">
+                                <i :class="selectedProduct.icon"></i>
+                             </div>
+                             <h2 class="text-4xl font-black text-center mb-2">{{ selectedProduct.name }}</h2>
+                             <p class="text-gray-500 text-xl">{{ selectedProduct.description }}</p>
+                        </div>
+
+                        <div v-if="selectedProduct.customizable" class="space-y-6">
+                            <h3 class="text-2xl font-bold border-b pb-2">Dostosuj składniki</h3>
+                            <div class="grid grid-cols-1 gap-4">
+                                <label v-for="opt in selectedProduct.options" :key="opt.name" 
+                                       class="flex items-center justify-between p-4 border-2 rounded-xl cursor-pointer transition-all"
+                                       :class="opt.checked ? 'border-green-500 bg-green-50' : 'border-gray-200'">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-white"
+                                             :class="opt.checked ? 'bg-green-500' : 'bg-gray-300'">
+                                            <i class="fas fa-check" v-if="opt.checked"></i>
+                                        </div>
+                                        <span class="text-xl font-bold">{{ opt.name }}</span>
+                                    </div>
+                                    <input type="checkbox" v-model="opt.checked" class="hidden">
+                                    <span class="text-gray-500 font-semibold" v-if="opt.price > 0">+{{ opt.price }} zł</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-gray-100">
+                        <button @click="addToCart" class="w-full bg-green-500 text-white py-6 rounded-2xl text-2xl font-black shadow-xl hover:bg-green-600 active:scale-95 transition-all flex justify-between px-8 items-center">
+                            <span>Dodaj do zamówienia</span>
+                            <span>{{ currentProductPrice.toFixed(2) }} zł</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <transition name="slide-up">
+            <div v-if="isCartOpen" class="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" @click.self="toggleCart">
+                <div class="bg-white w-full max-w-2xl h-[90vh] rounded-t-[3rem] flex flex-col shadow-2xl overflow-hidden">
+                    <div class="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                        <h2 class="text-3xl font-black">Twoje zamówienie</h2>
+                        <button @click="toggleCart" class="text-gray-500 hover:text-red-600"><i class="fas fa-times text-2xl"></i></button>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto p-6 no-scrollbar">
+                        <div v-if="cart.length === 0" class="h-full flex flex-col items-center justify-center text-gray-400">
+                            <i class="fas fa-shopping-basket text-6xl mb-4"></i>
+                            <p class="text-xl">Koszyk jest pusty</p>
+                        </div>
+
+                        <div v-else class="space-y-4">
+                            <div v-for="(item, index) in cart" :key="index" class="flex items-center justify-between p-4 bg-white border rounded-2xl shadow-sm animate__animated animate__fadeInRight">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-16 h-16 bg-yellow-100 rounded-xl flex items-center justify-center text-yellow-600 text-2xl">
+                                        <i :class="item.icon"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xl font-bold">{{ item.name }}</h4>
+                                        <p class="text-sm text-gray-500" v-if="item.mods && item.mods.length > 0">
+                                            {{ item.mods.join(', ') }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <span class="font-bold text-xl">{{ item.finalPrice.toFixed(2) }} zł</span>
+                                    <button @click="removeFromCart(index)" class="text-red-500 w-10 h-10 rounded-full hover:bg-red-50 flex items-center justify-center"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-8 bg-gray-50 border-t border-gray-200">
+                        <div class="flex justify-between items-end mb-6">
+                            <span class="text-xl font-bold text-gray-500">Razem do zapłaty</span>
+                            <span class="text-5xl font-black text-gray-900">{{ cartTotal.toFixed(2) }} zł</span>
+                        </div>
+                        <button @click="processPayment" 
+                                class="w-full bg-yellow-400 text-red-900 py-6 rounded-2xl text-3xl font-black shadow-xl hover:bg-yellow-300 active:scale-95 transition-all mb-4">
+                            Zapłać teraz
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+        
+        <div v-if="screen === 'success'" class="absolute inset-0 z-[60] bg-green-500 flex flex-col items-center justify-center text-white text-center">
+             <div class="w-32 h-32 bg-white rounded-full flex items-center justify-center text-green-500 text-6xl mb-8 animate__animated animate__bounceIn">
+                 <i class="fas fa-check"></i>
+             </div>
+             <h2 class="text-5xl font-black mb-4">Zapłacono!</h2>
+             <p class="text-2xl opacity-90 mb-8">Odbierz numerek: <span class="font-black text-4xl block mt-2">#042</span></p>
+             <button @click="resetKiosk" class="bg-white text-green-600 px-12 py-4 rounded-full font-bold text-xl shadow-lg">Nowe zamówienie</button>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    screen: 'welcome', // welcome, menu, success
+                    activeCategory: 'burgery',
+                    selectedProduct: null, // Obiekt otwartego modala
+                    isCartOpen: false,
+                    cart: [],
+                    
+                    // BAZA DANYCH PRODUKTÓW
+                    categories: [
+                        { id: 'burgery', name: 'Burgery', icon: 'fas fa-hamburger' },
+                        { id: 'napoje', name: 'Napoje', icon: 'fas fa-cup-togo' },
+                        { id: 'dodatki', name: 'Dodatki', icon: 'fas fa-utensils' },
+                        { id: 'desery', name: 'Desery', icon: 'fas fa-ice-cream' },
+                    ],
+                    products: [
+                        { 
+                            id: 1, category: 'burgery', name: 'Big King', price: 18.50, kcal: 550, icon: 'fas fa-hamburger', description: 'Dwa kotlety wołowe, ser, sałata i nasz sekretny sos.',
+                            customizable: true,
+                            options: [
+                                { name: 'Bez ogórka', price: 0, checked: false },
+                                { name: 'Dodatkowy ser', price: 2.50, checked: false },
+                                { name: 'Extra Bekon', price: 3.00, checked: false }
+                            ]
+                        },
+                        { 
+                            id: 2, category: 'burgery', name: 'Cheese Classic', price: 9.00, kcal: 300, icon: 'fas fa-cheese', description: 'Klasyczny cheeseburger. Prosty i pyszny.',
+                            customizable: true,
+                            options: [
+                                { name: 'Bez cebuli', price: 0, checked: false },
+                                { name: 'Podwójne mięso', price: 4.00, checked: false }
+                            ]
+                        },
+                        { id: 3, category: 'burgery', name: 'Chicken Spicy', price: 16.00, kcal: 450, icon: 'fas fa-drumstick-bite', description: 'Pikantny kurczak w złocistej panierce.', customizable: false },
+                        { 
+                            id: 4, category: 'napoje', name: 'Cola Zero', price: 7.50, kcal: 2, icon: 'fas fa-glass-whiskey', description: 'Orzeźwiający smak bez cukru.',
+                            customizable: true,
+                            options: [
+                                { name: 'Bez lodu', price: 0, checked: false },
+                                { name: 'Duża (0.5L)', price: 2.00, checked: false }
+                            ]
+                        },
+                        { id: 5, category: 'napoje', name: 'Woda Niegaz.', price: 5.00, kcal: 0, icon: 'fas fa-tint', customizable: false },
+                        { id: 6, category: 'dodatki', name: 'Frytki', price: 8.00, kcal: 320, icon: 'fas fa-french-fries', customizable: false },
+                        { id: 7, category: 'desery', name: 'Lody Waniliowe', price: 6.50, kcal: 200, icon: 'fas fa-ice-cream', customizable: false },
+                    ]
+                }
+            },
+            computed: {
+                filteredProducts() {
+                    return this.products.filter(p => p.category === this.activeCategory);
+                },
+                getCategoryName() {
+                    return (id) => this.categories.find(c => c.id === id)?.name;
+                },
+                // Cena produktu w modalu (baza + dodatki)
+                currentProductPrice() {
+                    if (!this.selectedProduct) return 0;
+                    let price = this.selectedProduct.price;
+                    if (this.selectedProduct.options) {
+                        this.selectedProduct.options.forEach(opt => {
+                            if (opt.checked) price += opt.price;
+                        });
+                    }
+                    return price;
+                },
+                cartCount() {
+                    return this.cart.length;
+                },
+                cartTotal() {
+                    return this.cart.reduce((sum, item) => sum + item.finalPrice, 0);
+                }
+            },
+            methods: {
+                startOrder() {
+                    this.screen = 'menu';
+                },
+                selectCategory(id) {
+                    this.activeCategory = id;
+                },
+                openProductModal(product) {
+                    // Tworzymy kopię produktu (deep copy), żeby resetować checkboxy przy każdym otwarciu
+                    this.selectedProduct = JSON.parse(JSON.stringify(product));
+                },
+                closeModal() {
+                    this.selectedProduct = null;
+                },
+                addToCart() {
+                    if (!this.selectedProduct) return;
+                    
+                    // Zbieramy nazwy wybranych dodatków
+                    let mods = [];
+                    if (this.selectedProduct.options) {
+                        mods = this.selectedProduct.options
+                            .filter(o => o.checked)
+                            .map(o => o.name);
+                    }
+
+                    this.cart.push({
+                        ...this.selectedProduct,
+                        finalPrice: this.currentProductPrice,
+                        mods: mods
+                    });
+
+                    this.closeModal();
+                    
+                    // Opcjonalnie: automatycznie otwórz koszyk po dodaniu (można wyłączyć)
+                    // this.isCartOpen = true; 
+                },
+                toggleCart() {
+                    this.isCartOpen = !this.isCartOpen;
+                },
+                removeFromCart(index) {
+                    this.cart.splice(index, 1);
+                    if (this.cart.length === 0) this.isCartOpen = false;
+                },
+                processPayment() {
+                    this.isCartOpen = false;
+                    this.screen = 'success';
+                },
+                resetKiosk() {
+                    this.cart = [];
+                    this.screen = 'welcome';
+                    this.selectedProduct = null;
+                    this.isCartOpen = false;
+                    this.activeCategory = 'burgery';
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
