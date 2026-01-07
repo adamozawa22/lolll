@@ -3,250 +3,266 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartLifeFood Kiosk</title>
+    <title>SmartLifeFood - Retro UI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        
+        /* Styl Starego Facebooka / iOS */
+        :root {
+            --fb-blue: #3b5998;
+            --fb-dark-blue: #2d4373;
+            --fb-bg: #e9ebee;
+        }
+
+        body { background-color: var(--fb-bg); }
+
+        /* Klasyczny niebieski pasek z gradientem */
+        .fb-header {
+            background: linear-gradient(to bottom, #4c66a4 0%, #3b5998 100%);
+            border-bottom: 1px solid #2d4373;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Menu boczne w stylu "Drawer" */
+        .sidebar-old-school {
+            background: #2d3136;
+            color: #bdc1c6;
+        }
+
+        .sidebar-item-active {
+            background: #191c1f;
+            color: white;
+            box-shadow: inset 4px 0 0 #3b5998;
+        }
+
+        /* Przyciski skeuomorficzne (wypukłe) */
+        .fb-btn {
+            background: linear-gradient(to bottom, #ffffff 0%, #f1f1f1 100%);
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            box-shadow: inset 0 1px 0 white, 0 1px 2px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+
+        .fb-btn:active {
+            background: #ebebeb;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .fb-btn-blue {
+            background: linear-gradient(to bottom, #4c66a4 0%, #3b5998 100%);
+            border: 1px solid #2d4373;
+            color: white;
+            text-shadow: 0 -1px 0 rgba(0,0,0,0.5);
+        }
+
         /* Animacja paragonu */
         @keyframes print-receipt {
-            0% { transform: translateY(-100%); opacity: 0; }
-            100% { transform: translateY(0); opacity: 1; }
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(0); }
         }
-        .receipt-animation { animation: print-receipt 1.5s ease-out forwards; }
-
-        /* Maszyna do gotówki */
-        .bill-slot { 
-            box-shadow: inset 0 10px 20px rgba(0,0,0,0.5);
-            background: #111;
-        }
-        .bill { transition: all 0.3s ease; cursor: grab; }
-        .bill:active { cursor: grabbing; scale: 1.1; }
-
-        .slide-up-enter-active, .slide-up-leave-active { transition: all 0.5s cubic-bezier(0.32, 0.72, 0, 1); }
-        .slide-up-enter-from, .slide-up-leave-to { transform: translateY(100%); }
+        .receipt-out { animation: print-receipt 2s ease-out forwards; }
     </style>
 </head>
-<body class="h-screen w-screen overflow-hidden bg-emerald-900 select-none text-zinc-800">
+<body class="h-screen w-screen overflow-hidden select-none">
 
-    <div id="app" class="h-full w-full font-sans">
+<div id="app" class="h-full w-full flex flex-col">
 
-        <transition name="fade">
-            <div v-if="screen === 'init'" class="absolute inset-0 z-[110] bg-zinc-900 flex flex-col items-center justify-center text-white p-10">
-                <h1 class="text-4xl font-black mb-12 uppercase italic text-emerald-500">SmartLifeFood</h1>
-                <h2 class="text-2xl mb-10 font-light">Wybierz preferencje obsługi:</h2>
-                <div class="grid grid-cols-1 gap-6 w-full max-w-md">
-                    <button @click="initSystem(true)" class="bg-emerald-600 p-8 rounded-3xl flex items-center justify-between text-2xl font-bold shadow-2xl">
-                        <span>CHCĘ LEKTORA</span>
-                        <i class="fas fa-volume-up"></i>
-                    </button>
-                    <button @click="initSystem(false)" class="bg-zinc-800 border-2 border-zinc-700 p-8 rounded-3xl flex items-center justify-between text-2xl font-bold">
-                        <span>BEZ DŹWIĘKU</span>
-                        <i class="fas fa-volume-mute"></i>
-                    </button>
-                </div>
-            </div>
-        </transition>
-
-        <transition name="fade">
-            <div v-if="screen === 'welcome'" class="absolute inset-0 z-[100] bg-emerald-700 flex flex-col items-center justify-center text-white text-center" @click="nextStep('selection')">
-                <div class="animate__animated animate__pulse animate__infinite">
-                    <i class="fas fa-leaf text-9xl text-emerald-300 mb-8"></i>
-                </div>
-                <h1 class="text-7xl font-black mb-4">SmartLifeFood</h1>
-                <p class="text-xl tracking-[0.5em] opacity-70">DOTKNIJ ABY ZAMÓWIĆ</p>
-            </div>
-        </transition>
-
-        <div v-if="screen === 'selection'" class="absolute inset-0 z-[90] bg-zinc-100 flex flex-col p-12">
-            <h2 class="text-5xl font-black text-center mb-16 mt-10">Gdzie zjesz posiłek?</h2>
-            <div class="grid grid-cols-2 gap-8 flex-1 mb-10">
-                <div @click="orderOption = 'Na miejscu'; screen = 'card_prompt'" class="bg-white rounded-[3rem] shadow-xl flex flex-col items-center justify-center active:scale-95 transition-all">
-                    <i class="fas fa-utensils text-7xl text-emerald-600 mb-6"></i>
-                    <span class="text-3xl font-bold">NA MIEJSCU</span>
-                </div>
-                <div @click="orderOption = 'Na wynos'; screen = 'card_prompt'" class="bg-white rounded-[3rem] shadow-xl flex flex-col items-center justify-center active:scale-95 transition-all">
-                    <i class="fas fa-shopping-bag text-7xl text-orange-500 mb-6"></i>
-                    <span class="text-3xl font-bold">NA WYNOS</span>
-                </div>
-            </div>
+    <div v-if="screen === 'init'" class="absolute inset-0 z-[200] bg-white flex flex-col items-center justify-center p-10">
+        <div class="fb-header w-full absolute top-0 h-16 flex items-center justify-center text-white font-bold text-xl">
+            SmartLifeFood Accessibility
         </div>
-
-        <div v-if="screen === 'card_prompt'" class="absolute inset-0 z-[90] bg-emerald-900 flex flex-col items-center justify-center text-white p-12">
-            <h2 class="text-4xl font-black mb-12">Masz kartę SmartLife?</h2>
-            <div class="flex gap-6 w-full max-w-2xl">
-                <button @click="screen = 'menu'" class="flex-1 bg-white text-emerald-900 p-10 rounded-3xl text-2xl font-black">TAK, SKANUJĘ</button>
-                <button @click="screen = 'menu'" class="flex-1 border-2 border-white/20 p-10 rounded-3xl text-2xl font-black">NIE MAM</button>
-            </div>
+        <h2 class="text-2xl font-bold mb-8">Czy włączyć lektora?</h2>
+        <div class="flex gap-4">
+            <button @click="init(true)" class="fb-btn px-10 py-5 text-xl font-bold text-blue-800 border-blue-300">TAK (GŁOS)</button>
+            <button @click="init(false)" class="fb-btn px-10 py-5 text-xl font-bold text-gray-600">NIE</button>
         </div>
-
-        <div v-if="['menu', 'pay_choice', 'cash_game', 'payment_nfc', 'success'].includes(screen)" class="h-full flex flex-col bg-white">
-            <header class="h-20 px-8 flex items-center justify-between border-b shrink-0">
-                <span class="font-black text-emerald-600 italic tracking-tighter text-2xl">SmartLifeFood</span>
-                <div class="bg-emerald-100 px-4 py-2 rounded-full text-emerald-700 font-bold text-sm">{{ orderOption }}</div>
-            </header>
-
-            <div class="flex-1 flex overflow-hidden">
-                <aside class="w-28 flex flex-col border-r bg-zinc-50 py-4">
-                    <div v-for="cat in categories" :key="cat.id" @click="activeCategory = cat.id"
-                         :class="['flex flex-col items-center py-6 cursor-pointer', activeCategory === cat.id ? 'text-emerald-600 bg-white border-r-4 border-emerald-600' : 'text-zinc-400']">
-                        <i :class="[cat.icon, 'text-2xl mb-2']"></i>
-                        <span class="text-[9px] font-black uppercase text-center px-1">{{ cat.name }}</span>
-                    </div>
-                </aside>
-
-                <main class="flex-1 p-6 overflow-y-auto no-scrollbar grid grid-cols-2 gap-4 content-start pb-40">
-                    <div v-for="product in filteredProducts" :key="product.id" @click="addToCart(product)"
-                         class="bg-white border rounded-[2rem] p-5 shadow-sm active:scale-95 transition-all">
-                        <div class="h-32 bg-zinc-50 rounded-2xl mb-3 flex items-center justify-center">
-                            <i :class="[product.icon, 'text-5xl text-emerald-200']"></i>
-                        </div>
-                        <h3 class="font-bold text-sm h-10 overflow-hidden leading-tight">{{ product.name }}</h3>
-                        <p class="text-xl font-black text-emerald-600 mt-2">{{ product.price.toFixed(2) }} zł</p>
-                    </div>
-                </main>
-            </div>
-
-            <footer class="h-28 px-8 flex items-center justify-between border-t bg-white shadow-2xl z-20">
-                <div>
-                    <p class="text-zinc-400 text-xs font-bold uppercase">Razem</p>
-                    <p class="text-3xl font-black">{{ cartTotal.toFixed(2) }} zł</p>
-                </div>
-                <button @click="screen = 'pay_choice'" class="bg-emerald-600 text-white px-10 py-5 rounded-2xl font-black text-lg shadow-lg">ZAMÓW ({{ cartCount }})</button>
-            </footer>
-        </div>
-
-        <transition name="slide-up">
-            <div v-if="screen === 'pay_choice'" class="fixed inset-0 z-[110] bg-black/60 backdrop-blur-md flex items-end justify-center">
-                <div class="bg-white w-full rounded-t-[3rem] p-10 pb-20 space-y-6">
-                    <h2 class="text-3xl font-black text-center mb-8">Jak chcesz zapłacić?</h2>
-                    <div class="grid grid-cols-2 gap-6">
-                        <button @click="screen = 'payment_nfc'" class="bg-zinc-100 p-10 rounded-3xl flex flex-col items-center gap-4">
-                            <i class="fas fa-credit-card text-5xl text-blue-600"></i>
-                            <span class="font-black">KARTA / TELEFON</span>
-                        </button>
-                        <button @click="startCashGame" class="bg-zinc-100 p-10 rounded-3xl flex flex-col items-center gap-4">
-                            <i class="fas fa-money-bill-wave text-5xl text-emerald-600"></i>
-                            <span class="font-black">GOTÓWKA</span>
-                        </button>
-                    </div>
-                    <button @click="screen = 'menu'" class="w-full text-zinc-400 font-bold py-4">Wróć do menu</button>
-                </div>
-            </div>
-        </transition>
-
-        <div v-if="screen === 'cash_game'" class="fixed inset-0 z-[120] bg-zinc-900 flex flex-col items-center p-10">
-            <h2 class="text-white text-3xl font-black mb-10 text-center">Wsuń 100 PLN do maszyny</h2>
-            <div class="w-full max-w-md h-32 bill-slot rounded-2xl mb-20 border-4 border-zinc-700 flex items-center justify-center">
-                <div class="w-64 h-2 bg-emerald-500/20 rounded-full animate-pulse shadow-[0_0_15px_emerald]"></div>
-            </div>
-            
-            <div class="relative flex-1 w-full flex items-center justify-center">
-                <div @click="confirmPayment" class="bill w-72 h-32 bg-emerald-200 rounded-lg border-2 border-emerald-400 p-4 flex flex-col justify-between shadow-2xl animate__animated animate__shakeX">
-                    <div class="flex justify-between font-black text-emerald-800"><span>100</span><span>100</span></div>
-                    <div class="text-center italic font-serif text-emerald-900">BANKNOT TESTOWY</div>
-                    <div class="flex justify-between font-black text-emerald-800 uppercase text-xs"><span>SmartLifeFood</span><span>NBP</span></div>
-                </div>
-            </div>
-            <p class="text-white opacity-50 mt-10">KLIKNIJ BANKNOT, ABY GO WSUNĄĆ</p>
-        </div>
-
-        <div v-if="screen === 'success'" class="fixed inset-0 z-[130] bg-zinc-100 flex flex-col items-center justify-start pt-20">
-            <div class="text-center mb-10 animate__animated animate__fadeInDown">
-                <div class="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center text-white text-4xl mx-auto mb-4">
-                    <i class="fas fa-check"></i>
-                </div>
-                <h2 class="text-4xl font-black">Gotowe!</h2>
-                <p class="text-zinc-500">Odbierz zamówienie przy ladzie</p>
-            </div>
-
-            <div class="w-64 h-4 bg-zinc-800 rounded-t-lg shadow-inner"></div>
-            
-            <div class="w-56 bg-white shadow-xl p-6 receipt-animation border-x border-zinc-200">
-                <div class="text-center text-[10px] font-black border-b pb-2 mb-2">SmartLifeFood #{{ Math.floor(Math.random()*100) }}</div>
-                <div v-for="item in cart" class="flex justify-between text-[8px] mb-1">
-                    <span>{{ item.name }}</span>
-                    <span>{{ item.price.toFixed(2) }}</span>
-                </div>
-                <div class="border-t mt-2 pt-2 flex justify-between font-black text-xs">
-                    <span>SUMA:</span>
-                    <span>{{ cartTotal.toFixed(2) }} zł</span>
-                </div>
-                <div class="mt-4 text-[6px] text-center opacity-50">DZIĘKUJEMY ZA ZAKUPY</div>
-            </div>
-
-            <button @click="resetKiosk" class="mt-20 bg-emerald-600 text-white px-10 py-4 rounded-full font-black">NOWE ZAMÓWIENIE</button>
-        </div>
-
     </div>
 
-    <script>
-        const { createApp } = Vue;
-        createApp({
-            data() {
-                return {
-                    screen: 'init',
-                    useLector: false,
-                    orderOption: '',
-                    activeCategory: 'burgery',
-                    cart: [],
-                    categories: [
-                        { id: 'burgery', name: 'Burgery Vege & Meat', icon: 'fas fa-hamburger' },
-                        { id: 'zestawy', name: 'Zestawy Smart', icon: 'fas fa-layer-group' },
-                        { id: 'wrapy', name: 'Wrapy & Sałatki', icon: 'fas fa-burrito' },
-                        { id: 'napoje', name: 'Napoje Bio', icon: 'fas fa-leaf' }
-                    ],
-                    products: [
-                        { id: 1, category: 'burgery', name: 'Smart Beef XXL', price: 28.50, icon: 'fas fa-burger' },
-                        { id: 2, category: 'burgery', name: 'Bio Avocado Burger', price: 32.00, icon: 'fas fa-seedling' },
-                        { id: 3, category: 'zestawy', name: 'Zestaw Fit-Life', price: 45.00, icon: 'fas fa-utensils' },
-                        { id: 4, category: 'wrapy', name: 'Chicken Fit Wrap', price: 22.00, icon: 'fas fa-scroll' },
-                        { id: 5, category: 'napoje', name: 'Kombucha Lemon', price: 14.00, icon: 'fas fa-glass-whiskey' },
-                        { id: 6, category: 'napoje', name: 'Woda Smart Alakaliczna', price: 6.00, icon: 'fas fa-tint' }
-                    ]
-                }
-            },
-            computed: {
-                filteredProducts() { return this.products.filter(p => p.category === this.activeCategory); },
-                cartCount() { return this.cart.length; },
-                cartTotal() { return this.cart.reduce((s, i) => s + i.price, 0); }
-            },
-            methods: {
-                speak(text) {
-                    if (!this.useLector) return;
-                    const msg = new SpeechSynthesisUtterance(text);
-                    msg.lang = 'pl-PL';
-                    window.speechSynthesis.speak(msg);
-                },
-                initSystem(lector) {
-                    this.useLector = lector;
-                    this.screen = 'welcome';
-                    if(lector) this.speak("Witaj w Smart Life Food. Dotknij ekranu, aby rozpocząć zamówienie.");
-                },
-                nextStep(step) {
-                    this.screen = step;
-                    if(step === 'selection') this.speak("Czy zjesz na miejscu, czy weźmiesz na wynos?");
-                },
-                addToCart(p) {
-                    this.cart.push(p);
-                },
-                startCashGame() {
-                    this.screen = 'cash_game';
-                    this.speak("Proszę wsunąć banknoty do otworu poniżej.");
-                },
-                confirmPayment() {
-                    this.screen = 'success';
-                    this.speak("Płatność zaakceptowana. Odbierz swój paragon i smacznego!");
-                },
-                resetKiosk() {
-                    location.reload(); // Najszybszy reset systemu
-                }
+    <div v-if="screen === 'welcome'" class="absolute inset-0 z-[150] bg-[#3b5998] flex flex-col items-center justify-center text-white cursor-pointer" @click="screen = 'selection'">
+        <i class="fab fa-facebook-square text-[120px] mb-6"></i>
+        <h1 class="text-4xl font-bold mb-2">SmartLifeFood</h1>
+        <p class="opacity-70 animate-pulse">Dotknij, aby się zalogować do menu</p>
+    </div>
+
+    <div v-if="screen === 'selection'" class="absolute inset-0 z-[140] bg-[#e9ebee] flex flex-col p-10 items-center justify-center">
+        <h2 class="text-3xl font-bold text-[#3b5998] mb-10">Wybierz sposób zamówienia:</h2>
+        <div class="grid grid-cols-2 gap-6 w-full max-w-2xl">
+            <div @click="setOption('Na miejscu')" class="fb-btn p-10 flex flex-col items-center gap-4 cursor-pointer">
+                <i class="fas fa-utensils text-5xl text-blue-700"></i>
+                <span class="text-2xl font-bold">NA MIEJSCU</span>
+            </div>
+            <div @click="setOption('Na wynos')" class="fb-btn p-10 flex flex-col items-center gap-4 cursor-pointer">
+                <i class="fas fa-shopping-bag text-5xl text-gray-600"></i>
+                <span class="text-2xl font-bold">NA WYNOS</span>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="screen === 'card_prompt'" class="absolute inset-0 z-[130] bg-white flex flex-col items-center justify-center p-10">
+        <div class="bg-blue-100 p-8 rounded-full mb-8">
+            <i class="fas fa-id-card text-7xl text-blue-600 animate-bounce"></i>
+        </div>
+        <h2 class="text-3xl font-bold mb-4">Skanuj Kartę SmartLife</h2>
+        <p class="text-gray-500 mb-10">Zyskaj -15% na całe zamówienie</p>
+        <button @click="applyCard" class="fb-btn-blue w-full max-w-sm py-6 text-2xl font-bold mb-4 uppercase">Skanuj Symulację</button>
+        <button @click="screen = 'menu'" class="text-gray-400 font-bold underline">Nie mam karty</button>
+    </div>
+
+    <div v-if="['menu', 'cash_game', 'success'].includes(screen)" class="h-full flex flex-col">
+        <header class="fb-header h-14 flex items-center justify-between px-4 shrink-0 z-50">
+            <button @click="screen = 'selection'" class="text-white opacity-80"><i class="fas fa-bars text-xl"></i></button>
+            <div class="text-white font-bold text-lg">SmartLifeFood</div>
+            <div class="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-sm font-bold">LIVE</div>
+        </header>
+
+        <div class="flex-1 flex overflow-hidden">
+            <nav class="w-20 sidebar-old-school flex flex-col items-center py-4 gap-6 shrink-0">
+                <div v-for="cat in categories" @click="activeCategory = cat.id"
+                     :class="['p-3 rounded-lg transition-all', activeCategory === cat.id ? 'sidebar-item-active' : '']">
+                    <i :class="[cat.icon, 'text-2xl']"></i>
+                </div>
+            </nav>
+
+            <main class="flex-1 overflow-y-auto p-4 space-y-4 pb-40">
+                <div v-for="product in filteredProducts" 
+                     @click="product.stock ? addToCart(product) : null"
+                     :class="['fb-btn flex p-4 gap-4 items-center', !product.stock ? 'opacity-50 grayscale' : '']">
+                    <div class="w-20 h-20 bg-gray-200 rounded-md flex items-center justify-center text-3xl">
+                        <i :class="product.icon"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-lg">{{ product.name }}</h4>
+                        <p class="text-blue-700 font-black text-xl">{{ product.price.toFixed(2) }} zł</p>
+                        <p v-if="!product.stock" class="text-red-600 text-[10px] font-bold uppercase">Wyprzedane</p>
+                    </div>
+                    <div class="text-gray-300"><i class="fas fa-chevron-right"></i></div>
+                </div>
+            </main>
+        </div>
+
+        <footer class="h-20 bg-white border-t p-4 flex items-center justify-between shadow-2xl z-50">
+            <div>
+                <span v-if="discount > 0" class="text-[10px] text-green-600 font-bold block leading-none">ZNIŻKA -15% AKTYWNA</span>
+                <span class="text-2xl font-black">{{ finalTotal.toFixed(2) }} zł</span>
+            </div>
+            <button @click="screen = 'cash_game'" class="fb-btn-blue px-8 py-3 rounded-md font-bold text-lg">PŁACĘ ({{ cart.length }})</button>
+        </footer>
+    </div>
+
+    <div v-if="screen === 'cash_game'" class="fixed inset-0 z-[300] bg-zinc-900 flex flex-col items-center justify-center p-10 text-white">
+        <h2 class="text-2xl font-bold mb-10">Wsuń 50 PLN do czytnika</h2>
+        <div class="w-full max-w-xs h-4 bg-black border-2 border-zinc-700 shadow-[0_0_20px_rgba(52,211,153,0.5)] mb-20 rounded-full"></div>
+        
+        <div @click="confirmPayment" class="animate__animated animate__pulse animate__infinite">
+            <div class="w-64 h-28 bg-blue-100 rounded-lg border-4 border-blue-300 flex flex-col justify-between p-3 cursor-pointer hover:scale-105 transition-transform">
+                <div class="flex justify-between font-bold text-blue-900"><span>50</span><span>50</span></div>
+                <div class="text-center font-bold text-blue-800">BANKNOT SMART</div>
+                <div class="flex justify-between text-[8px] text-blue-900 font-black"><span>SLF KIOSK</span><span>2026</span></div>
+            </div>
+        </div>
+        <p class="mt-10 opacity-50 uppercase text-xs tracking-widest">Kliknij banknot, aby wsunąć</p>
+    </div>
+
+    <div v-if="screen === 'success'" class="fixed inset-0 z-[400] bg-[#e9ebee] flex flex-col items-center pt-20">
+        <div class="text-center mb-8 animate__animated animate__bounceIn">
+            <i class="fas fa-check-circle text-7xl text-green-500 mb-4"></i>
+            <h2 class="text-3xl font-bold text-gray-800">DZIĘKUJEMY!</h2>
+            <p class="text-gray-500">Odbierz swój paragon poniżej</p>
+        </div>
+
+        <div class="w-64 h-3 bg-zinc-800 rounded-t-lg"></div>
+        <div class="w-56 bg-white p-4 shadow-2xl border border-gray-200 receipt-out">
+            <div class="text-center font-bold text-xs border-b-2 border-dashed pb-2 mb-2 italic">SmartLifeFood</div>
+            <div v-for="item in cart" class="flex justify-between text-[10px] mb-1">
+                <span>{{ item.name }}</span>
+                <span>{{ item.price }}</span>
+            </div>
+            <div v-if="discount > 0" class="text-green-600 text-[9px] font-bold border-t pt-1">ZNIŻKA: -15%</div>
+            <div class="border-t-2 border-dashed mt-2 pt-2 flex justify-between font-bold">
+                <span>TOTAL:</span>
+                <span>{{ finalTotal.toFixed(2) }} zł</span>
+            </div>
+            <div class="mt-4 text-center">
+                <div class="text-[8px]">NUMER ZAMÓWIENIA:</div>
+                <div class="text-2xl font-black">#{{ Math.floor(Math.random()*100) }}</div>
+            </div>
+        </div>
+
+        <button @click="reset" class="mt-16 fb-btn-blue px-10 py-4 font-bold rounded-lg shadow-xl">ODBIERZ I ZAMKNIJ</button>
+    </div>
+
+</div>
+
+<script>
+    const { createApp } = Vue;
+    createApp({
+        data() {
+            return {
+                screen: 'init',
+                useLector: false,
+                orderOption: '',
+                activeCategory: 'burgery',
+                discount: 0,
+                cart: [],
+                categories: [
+                    { id: 'burgery', icon: 'fas fa-hamburger', name: 'Burgery' },
+                    { id: 'napoje', icon: 'fas fa-wine-glass', name: 'Napoje' },
+                    { id: 'dodatki', icon: 'fas fa-cookie', name: 'Dodatki' }
+                ],
+                products: [
+                    { id: 1, category: 'burgery', name: 'Retro Beef Burger', price: 25.00, icon: 'fas fa-burger', stock: true },
+                    { id: 2, category: 'burgery', name: 'Chicken Classic', price: 19.00, icon: 'fas fa-drumstick-bite', stock: true },
+                    { id: 3, category: 'burgery', name: 'Vege Post', price: 22.00, icon: 'fas fa-leaf', stock: false },
+                    { id: 4, category: 'napoje', name: 'Cola Retro', price: 8.00, icon: 'fas fa-glass-whiskey', stock: true },
+                    { id: 5, category: 'napoje', name: 'Sok Naturalny', price: 10.00, icon: 'fas fa-apple-whole', stock: true },
+                    { id: 6, category: 'dodatki', name: 'Frytki Stekowe', price: 12.00, icon: 'fas fa-box-tissue', stock: true }
+                ]
             }
-        }).mount('#app');
-    </script>
+        },
+        computed: {
+            filteredProducts() { return this.products.filter(p => p.category === this.activeCategory); },
+            cartTotal() { return this.cart.reduce((s, i) => s + i.price, 0); },
+            finalTotal() { return this.cartTotal * (1 - this.discount); }
+        },
+        methods: {
+            speak(text) {
+                if (!this.useLector) return;
+                const msg = new SpeechSynthesisUtterance(text);
+                msg.lang = 'pl-PL';
+                window.speechSynthesis.speak(msg);
+            },
+            init(lector) {
+                this.useLector = lector;
+                this.screen = 'welcome';
+                if(lector) this.speak("Witaj w Smart Life Food. Wybierz cokolwiek zechcesz.");
+            },
+            setOption(opt) {
+                this.orderOption = opt;
+                this.screen = 'card_prompt';
+                this.speak("Czy masz naszą kartę lojalnościową?");
+            },
+            applyCard() {
+                this.discount = 0.15;
+                this.screen = 'menu';
+                this.speak("Karta zaakceptowana. Przyznano piętnaście procent zniżki.");
+            },
+            addToCart(p) {
+                this.cart.push(p);
+                this.speak("Dodano " + p.name);
+            },
+            confirmPayment() {
+                this.screen = 'success';
+                this.speak("Dziękujemy. Zapłacono gotówką. Odbierz swój paragon.");
+            },
+            reset() {
+                location.reload();
+            }
+        }
+    }).mount('#app');
+</script>
 </body>
 </html>
