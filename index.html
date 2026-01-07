@@ -140,4 +140,113 @@
         </transition>
 
         <div v-if="screen === 'cash_game'" class="fixed inset-0 z-[120] bg-zinc-900 flex flex-col items-center p-10">
-            <h2 class="text-white text-3xl font-black mb-10 text-center
+            <h2 class="text-white text-3xl font-black mb-10 text-center">Wsuń 100 PLN do maszyny</h2>
+            <div class="w-full max-w-md h-32 bill-slot rounded-2xl mb-20 border-4 border-zinc-700 flex items-center justify-center">
+                <div class="w-64 h-2 bg-emerald-500/20 rounded-full animate-pulse shadow-[0_0_15px_emerald]"></div>
+            </div>
+            
+            <div class="relative flex-1 w-full flex items-center justify-center">
+                <div @click="confirmPayment" class="bill w-72 h-32 bg-emerald-200 rounded-lg border-2 border-emerald-400 p-4 flex flex-col justify-between shadow-2xl animate__animated animate__shakeX">
+                    <div class="flex justify-between font-black text-emerald-800"><span>100</span><span>100</span></div>
+                    <div class="text-center italic font-serif text-emerald-900">BANKNOT TESTOWY</div>
+                    <div class="flex justify-between font-black text-emerald-800 uppercase text-xs"><span>SmartLifeFood</span><span>NBP</span></div>
+                </div>
+            </div>
+            <p class="text-white opacity-50 mt-10">KLIKNIJ BANKNOT, ABY GO WSUNĄĆ</p>
+        </div>
+
+        <div v-if="screen === 'success'" class="fixed inset-0 z-[130] bg-zinc-100 flex flex-col items-center justify-start pt-20">
+            <div class="text-center mb-10 animate__animated animate__fadeInDown">
+                <div class="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center text-white text-4xl mx-auto mb-4">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h2 class="text-4xl font-black">Gotowe!</h2>
+                <p class="text-zinc-500">Odbierz zamówienie przy ladzie</p>
+            </div>
+
+            <div class="w-64 h-4 bg-zinc-800 rounded-t-lg shadow-inner"></div>
+            
+            <div class="w-56 bg-white shadow-xl p-6 receipt-animation border-x border-zinc-200">
+                <div class="text-center text-[10px] font-black border-b pb-2 mb-2">SmartLifeFood #{{ Math.floor(Math.random()*100) }}</div>
+                <div v-for="item in cart" class="flex justify-between text-[8px] mb-1">
+                    <span>{{ item.name }}</span>
+                    <span>{{ item.price.toFixed(2) }}</span>
+                </div>
+                <div class="border-t mt-2 pt-2 flex justify-between font-black text-xs">
+                    <span>SUMA:</span>
+                    <span>{{ cartTotal.toFixed(2) }} zł</span>
+                </div>
+                <div class="mt-4 text-[6px] text-center opacity-50">DZIĘKUJEMY ZA ZAKUPY</div>
+            </div>
+
+            <button @click="resetKiosk" class="mt-20 bg-emerald-600 text-white px-10 py-4 rounded-full font-black">NOWE ZAMÓWIENIE</button>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        createApp({
+            data() {
+                return {
+                    screen: 'init',
+                    useLector: false,
+                    orderOption: '',
+                    activeCategory: 'burgery',
+                    cart: [],
+                    categories: [
+                        { id: 'burgery', name: 'Burgery Vege & Meat', icon: 'fas fa-hamburger' },
+                        { id: 'zestawy', name: 'Zestawy Smart', icon: 'fas fa-layer-group' },
+                        { id: 'wrapy', name: 'Wrapy & Sałatki', icon: 'fas fa-burrito' },
+                        { id: 'napoje', name: 'Napoje Bio', icon: 'fas fa-leaf' }
+                    ],
+                    products: [
+                        { id: 1, category: 'burgery', name: 'Smart Beef XXL', price: 28.50, icon: 'fas fa-burger' },
+                        { id: 2, category: 'burgery', name: 'Bio Avocado Burger', price: 32.00, icon: 'fas fa-seedling' },
+                        { id: 3, category: 'zestawy', name: 'Zestaw Fit-Life', price: 45.00, icon: 'fas fa-utensils' },
+                        { id: 4, category: 'wrapy', name: 'Chicken Fit Wrap', price: 22.00, icon: 'fas fa-scroll' },
+                        { id: 5, category: 'napoje', name: 'Kombucha Lemon', price: 14.00, icon: 'fas fa-glass-whiskey' },
+                        { id: 6, category: 'napoje', name: 'Woda Smart Alakaliczna', price: 6.00, icon: 'fas fa-tint' }
+                    ]
+                }
+            },
+            computed: {
+                filteredProducts() { return this.products.filter(p => p.category === this.activeCategory); },
+                cartCount() { return this.cart.length; },
+                cartTotal() { return this.cart.reduce((s, i) => s + i.price, 0); }
+            },
+            methods: {
+                speak(text) {
+                    if (!this.useLector) return;
+                    const msg = new SpeechSynthesisUtterance(text);
+                    msg.lang = 'pl-PL';
+                    window.speechSynthesis.speak(msg);
+                },
+                initSystem(lector) {
+                    this.useLector = lector;
+                    this.screen = 'welcome';
+                    if(lector) this.speak("Witaj w Smart Life Food. Dotknij ekranu, aby rozpocząć zamówienie.");
+                },
+                nextStep(step) {
+                    this.screen = step;
+                    if(step === 'selection') this.speak("Czy zjesz na miejscu, czy weźmiesz na wynos?");
+                },
+                addToCart(p) {
+                    this.cart.push(p);
+                },
+                startCashGame() {
+                    this.screen = 'cash_game';
+                    this.speak("Proszę wsunąć banknoty do otworu poniżej.");
+                },
+                confirmPayment() {
+                    this.screen = 'success';
+                    this.speak("Płatność zaakceptowana. Odbierz swój paragon i smacznego!");
+                },
+                resetKiosk() {
+                    location.reload(); // Najszybszy reset systemu
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
