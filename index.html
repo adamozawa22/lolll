@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SARA Kiosk - Full Experience</title>
+    <title>SmartLifeFood Kiosk</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
@@ -12,206 +12,132 @@
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        @keyframes nfc-pay {
-            0% { transform: translateY(100px) rotate(-10deg); opacity: 0; }
-            50% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
-            100% { transform: translateY(-40px) scale(1.1); opacity: 0; }
+        /* Animacja paragonu */
+        @keyframes print-receipt {
+            0% { transform: translateY(-100%); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
         }
-        .phone-animation { animation: nfc-pay 2.5s infinite; }
+        .receipt-animation { animation: print-receipt 1.5s ease-out forwards; }
+
+        /* Maszyna do gotówki */
+        .bill-slot { 
+            box-shadow: inset 0 10px 20px rgba(0,0,0,0.5);
+            background: #111;
+        }
+        .bill { transition: all 0.3s ease; cursor: grab; }
+        .bill:active { cursor: grabbing; scale: 1.1; }
 
         .slide-up-enter-active, .slide-up-leave-active { transition: all 0.5s cubic-bezier(0.32, 0.72, 0, 1); }
         .slide-up-enter-from, .slide-up-leave-to { transform: translateY(100%); }
-        
-        .fade-enter-active, .fade-leave-active { transition: opacity 0.4s; }
-        .fade-enter-from, .fade-leave-to { opacity: 0; }
-
-        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
     </style>
 </head>
-<body class="h-screen w-screen overflow-hidden bg-zinc-900 select-none text-zinc-800">
+<body class="h-screen w-screen overflow-hidden bg-emerald-900 select-none text-zinc-800">
 
     <div id="app" class="h-full w-full font-sans">
 
         <transition name="fade">
-            <div v-if="screen === 'welcome'" 
-                 class="absolute inset-0 z-[100] bg-gradient-to-t from-zinc-950 to-red-600 flex flex-col items-center justify-center text-white text-center p-10"
-                 @click="nextStep('selection')">
-                <i class="fas fa-hamburger text-[10rem] mb-12 animate__animated animate__pulse animate__infinite"></i>
-                <h1 class="text-6xl font-black italic mb-4">SARA FOOD</h1>
-                <p class="text-2xl font-light opacity-80 uppercase tracking-widest">Dotknij, aby zamówić</p>
-            </div>
-        </transition>
-
-        <transition name="fade">
-            <div v-if="screen === 'selection'" class="absolute inset-0 z-[90] bg-zinc-100 flex flex-col p-12">
-                <h2 class="text-5xl font-black text-center mt-12 mb-20 uppercase tracking-tighter">Gdzie zjesz posiłek?</h2>
-                <div class="grid grid-cols-2 gap-10 flex-1">
-                    <div @click="setOption('place', 'Na miejscu')" class="bg-white rounded-[3rem] shadow-xl flex flex-col items-center justify-center border-b-8 border-red-500 active:scale-95 transition-all">
-                        <i class="fas fa-utensils text-8xl text-red-500 mb-6"></i>
-                        <span class="text-4xl font-black">NA MIEJSCU</span>
-                    </div>
-                    <div @click="setOption('place', 'Na wynos')" class="bg-white rounded-[3rem] shadow-xl flex flex-col items-center justify-center border-b-8 border-zinc-800 active:scale-95 transition-all">
-                        <i class="fas fa-shopping-bag text-8xl text-zinc-800 mb-6"></i>
-                        <span class="text-4xl font-black">NA WYNOS</span>
-                    </div>
+            <div v-if="screen === 'init'" class="absolute inset-0 z-[110] bg-zinc-900 flex flex-col items-center justify-center text-white p-10">
+                <h1 class="text-4xl font-black mb-12 uppercase italic text-emerald-500">SmartLifeFood</h1>
+                <h2 class="text-2xl mb-10 font-light">Wybierz preferencje obsługi:</h2>
+                <div class="grid grid-cols-1 gap-6 w-full max-w-md">
+                    <button @click="initSystem(true)" class="bg-emerald-600 p-8 rounded-3xl flex items-center justify-between text-2xl font-bold shadow-2xl">
+                        <span>CHCĘ LEKTORA</span>
+                        <i class="fas fa-volume-up"></i>
+                    </button>
+                    <button @click="initSystem(false)" class="bg-zinc-800 border-2 border-zinc-700 p-8 rounded-3xl flex items-center justify-between text-2xl font-bold">
+                        <span>BEZ DŹWIĘKU</span>
+                        <i class="fas fa-volume-mute"></i>
+                    </button>
                 </div>
             </div>
         </transition>
 
         <transition name="fade">
-            <div v-if="screen === 'card_prompt'" class="absolute inset-0 z-[80] bg-zinc-900 flex flex-col items-center justify-center text-white p-12 text-center">
-                <div class="bg-gradient-to-tr from-yellow-400 to-orange-500 w-32 h-32 rounded-3xl flex items-center justify-center mb-10 shadow-2xl rotate-12">
-                    <i class="fas fa-id-card text-5xl text-white"></i>
+            <div v-if="screen === 'welcome'" class="absolute inset-0 z-[100] bg-emerald-700 flex flex-col items-center justify-center text-white text-center" @click="nextStep('selection')">
+                <div class="animate__animated animate__pulse animate__infinite">
+                    <i class="fas fa-leaf text-9xl text-emerald-300 mb-8"></i>
                 </div>
-                <h2 class="text-5xl font-black mb-6">Czy masz kartę FastFood?</h2>
-                <p class="text-xl opacity-60 mb-12 uppercase tracking-widest">Zeskanuj teraz lub wybierz opcję</p>
-                <div class="flex flex-col w-full max-w-md gap-6">
-                    <button @click="nextStep('menu')" class="bg-white text-zinc-900 py-8 rounded-3xl text-3xl font-black shadow-lg">TAK, MAM KARTĘ</button>
-                    <button @click="nextStep('menu')" class="border-2 border-white/20 py-8 rounded-3xl text-3xl font-black">NIE, DZIĘKUJĘ</button>
-                </div>
+                <h1 class="text-7xl font-black mb-4">SmartLifeFood</h1>
+                <p class="text-xl tracking-[0.5em] opacity-70">DOTKNIJ ABY ZAMÓWIĆ</p>
             </div>
         </transition>
 
-        <div v-if="['menu', 'payment', 'success'].includes(screen)" class="h-full flex flex-col bg-white">
-            <header class="h-24 px-10 flex items-center justify-between border-b shrink-0 bg-white">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white font-black italic">S</div>
-                    <span class="text-xl font-black uppercase">{{ orderOption }}</span>
+        <div v-if="screen === 'selection'" class="absolute inset-0 z-[90] bg-zinc-100 flex flex-col p-12">
+            <h2 class="text-5xl font-black text-center mb-16 mt-10">Gdzie zjesz posiłek?</h2>
+            <div class="grid grid-cols-2 gap-8 flex-1 mb-10">
+                <div @click="orderOption = 'Na miejscu'; screen = 'card_prompt'" class="bg-white rounded-[3rem] shadow-xl flex flex-col items-center justify-center active:scale-95 transition-all">
+                    <i class="fas fa-utensils text-7xl text-emerald-600 mb-6"></i>
+                    <span class="text-3xl font-bold">NA MIEJSCU</span>
                 </div>
-                <div class="text-red-600 font-bold tracking-widest animate-pulse italic">SARA SYSTEM ACTIVE</div>
+                <div @click="orderOption = 'Na wynos'; screen = 'card_prompt'" class="bg-white rounded-[3rem] shadow-xl flex flex-col items-center justify-center active:scale-95 transition-all">
+                    <i class="fas fa-shopping-bag text-7xl text-orange-500 mb-6"></i>
+                    <span class="text-3xl font-bold">NA WYNOS</span>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="screen === 'card_prompt'" class="absolute inset-0 z-[90] bg-emerald-900 flex flex-col items-center justify-center text-white p-12">
+            <h2 class="text-4xl font-black mb-12">Masz kartę SmartLife?</h2>
+            <div class="flex gap-6 w-full max-w-2xl">
+                <button @click="screen = 'menu'" class="flex-1 bg-white text-emerald-900 p-10 rounded-3xl text-2xl font-black">TAK, SKANUJĘ</button>
+                <button @click="screen = 'menu'" class="flex-1 border-2 border-white/20 p-10 rounded-3xl text-2xl font-black">NIE MAM</button>
+            </div>
+        </div>
+
+        <div v-if="['menu', 'pay_choice', 'cash_game', 'payment_nfc', 'success'].includes(screen)" class="h-full flex flex-col bg-white">
+            <header class="h-20 px-8 flex items-center justify-between border-b shrink-0">
+                <span class="font-black text-emerald-600 italic tracking-tighter text-2xl">SmartLifeFood</span>
+                <div class="bg-emerald-100 px-4 py-2 rounded-full text-emerald-700 font-bold text-sm">{{ orderOption }}</div>
             </header>
 
             <div class="flex-1 flex overflow-hidden">
-                <aside class="w-32 flex flex-col border-r bg-zinc-50 py-4">
+                <aside class="w-28 flex flex-col border-r bg-zinc-50 py-4">
                     <div v-for="cat in categories" :key="cat.id" @click="activeCategory = cat.id"
-                         :class="['flex flex-col items-center py-8 cursor-pointer transition-all', activeCategory === cat.id ? 'text-red-600 bg-white border-r-4 border-red-600 shadow-inner' : 'text-zinc-400']">
-                        <i :class="[cat.icon, 'text-3xl mb-2']"></i>
-                        <span class="text-[10px] font-black uppercase">{{ cat.name }}</span>
+                         :class="['flex flex-col items-center py-6 cursor-pointer', activeCategory === cat.id ? 'text-emerald-600 bg-white border-r-4 border-emerald-600' : 'text-zinc-400']">
+                        <i :class="[cat.icon, 'text-2xl mb-2']"></i>
+                        <span class="text-[9px] font-black uppercase text-center px-1">{{ cat.name }}</span>
                     </div>
                 </aside>
 
-                <main class="flex-1 p-8 overflow-y-auto no-scrollbar grid grid-cols-2 gap-6 content-start pb-40">
+                <main class="flex-1 p-6 overflow-y-auto no-scrollbar grid grid-cols-2 gap-4 content-start pb-40">
                     <div v-for="product in filteredProducts" :key="product.id" @click="addToCart(product)"
-                         class="bg-white border border-zinc-100 p-6 rounded-[2.5rem] shadow-sm active:scale-95 transition-all relative overflow-hidden group">
-                        <div class="h-40 bg-zinc-50 rounded-3xl mb-4 flex items-center justify-center">
-                            <i :class="[product.icon, 'text-7xl text-zinc-200 group-hover:scale-110 transition-transform duration-500']"></i>
+                         class="bg-white border rounded-[2rem] p-5 shadow-sm active:scale-95 transition-all">
+                        <div class="h-32 bg-zinc-50 rounded-2xl mb-3 flex items-center justify-center">
+                            <i :class="[product.icon, 'text-5xl text-emerald-200']"></i>
                         </div>
-                        <h3 class="text-xl font-black text-zinc-800">{{ product.name }}</h3>
-                        <p class="text-2xl font-black text-red-600 mt-1">{{ product.price.toFixed(2) }} zł</p>
-                        <div class="absolute top-4 right-4 bg-zinc-900 text-white w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-active:opacity-100 transition-opacity">
-                            <i class="fas fa-plus"></i>
-                        </div>
+                        <h3 class="font-bold text-sm h-10 overflow-hidden leading-tight">{{ product.name }}</h3>
+                        <p class="text-xl font-black text-emerald-600 mt-2">{{ product.price.toFixed(2) }} zł</p>
                     </div>
                 </main>
             </div>
 
-            <footer class="h-32 px-10 flex items-center justify-between border-t glass z-20">
+            <footer class="h-28 px-8 flex items-center justify-between border-t bg-white shadow-2xl z-20">
                 <div>
-                    <p class="text-zinc-400 text-xs font-bold uppercase tracking-widest">Suma zamówienia</p>
-                    <p class="text-5xl font-black tracking-tighter">{{ cartTotal.toFixed(2) }} zł</p>
+                    <p class="text-zinc-400 text-xs font-bold uppercase">Razem</p>
+                    <p class="text-3xl font-black">{{ cartTotal.toFixed(2) }} zł</p>
                 </div>
-                <button @click="screen = 'payment'; speak('Proszę zbliżyć telefon lub kartę SARA do czytnika')" 
-                        class="bg-red-600 text-white px-12 py-6 rounded-[2rem] font-black text-2xl shadow-xl active:scale-95 transition-all">
-                    PŁACĘ ({{ cartCount }})
-                </button>
+                <button @click="screen = 'pay_choice'" class="bg-emerald-600 text-white px-10 py-5 rounded-2xl font-black text-lg shadow-lg">ZAMÓW ({{ cartCount }})</button>
             </footer>
         </div>
 
         <transition name="slide-up">
-            <div v-if="screen === 'payment'" class="fixed inset-0 z-[110] bg-zinc-950/90 backdrop-blur-2xl flex flex-col items-center justify-center text-white">
-                <div class="w-80 h-[500px] bg-zinc-800 rounded-[3.5rem] border-4 border-zinc-700 relative flex flex-col items-center p-8 shadow-2xl overflow-hidden">
-                    <div class="w-20 h-1.5 bg-zinc-600 rounded-full mb-10"></div>
-                    <p class="text-zinc-500 text-xs font-bold tracking-widest mb-2 uppercase">Weryfikacja SARA Pay</p>
-                    <p class="text-4xl font-black mb-12">{{ cartTotal.toFixed(2) }} zł</p>
-
-                    <div class="w-full aspect-square border-4 border-dashed border-red-500/30 rounded-full flex flex-col items-center justify-center relative mb-8">
-                        <i class="fas fa-fingerprint text-6xl text-red-500 animate-pulse"></i>
+            <div v-if="screen === 'pay_choice'" class="fixed inset-0 z-[110] bg-black/60 backdrop-blur-md flex items-end justify-center">
+                <div class="bg-white w-full rounded-t-[3rem] p-10 pb-20 space-y-6">
+                    <h2 class="text-3xl font-black text-center mb-8">Jak chcesz zapłacić?</h2>
+                    <div class="grid grid-cols-2 gap-6">
+                        <button @click="screen = 'payment_nfc'" class="bg-zinc-100 p-10 rounded-3xl flex flex-col items-center gap-4">
+                            <i class="fas fa-credit-card text-5xl text-blue-600"></i>
+                            <span class="font-black">KARTA / TELEFON</span>
+                        </button>
+                        <button @click="startCashGame" class="bg-zinc-100 p-10 rounded-3xl flex flex-col items-center gap-4">
+                            <i class="fas fa-money-bill-wave text-5xl text-emerald-600"></i>
+                            <span class="font-black">GOTÓWKA</span>
+                        </button>
                     </div>
-
-                    <div @click="confirmPayment" class="absolute bottom-[-40px] phone-animation cursor-pointer">
-                         <div class="w-44 h-80 bg-zinc-900 border-2 border-white/30 rounded-[2.5rem] p-4 flex flex-col shadow-[0_0_50px_rgba(239,68,68,0.3)]">
-                             <div class="w-full h-24 bg-red-600 rounded-2xl mb-4 flex items-center justify-center text-3xl font-black italic">SARA</div>
-                             <div class="space-y-2">
-                                 <div class="w-full h-3 bg-white/10 rounded"></div>
-                                 <div class="w-2/3 h-3 bg-white/10 rounded"></div>
-                             </div>
-                             <div class="mt-auto text-center text-[10px] font-bold opacity-40 uppercase">Zbliż tutaj</div>
-                         </div>
-                    </div>
+                    <button @click="screen = 'menu'" class="w-full text-zinc-400 font-bold py-4">Wróć do menu</button>
                 </div>
-                <p class="mt-10 text-xl font-bold text-zinc-400">Kliknij telefon, aby zapłacić</p>
             </div>
         </transition>
 
-        <transition name="fade">
-            <div v-if="screen === 'success'" class="fixed inset-0 z-[120] bg-white flex flex-col items-center justify-center text-center">
-                <div class="w-40 h-40 bg-green-500 rounded-full flex items-center justify-center text-white text-6xl shadow-2xl animate__animated animate__bounceIn mb-8">
-                    <i class="fas fa-check"></i>
-                </div>
-                <h2 class="text-6xl font-black mb-4 tracking-tighter">SMACZNEGO!</h2>
-                <p class="text-2xl text-zinc-500 mb-12 uppercase tracking-widest">Twoje zamówienie: <span class="text-red-600 font-black">#{{ Math.floor(Math.random()*100) }}</span></p>
-                <button @click="resetKiosk" class="bg-zinc-900 text-white px-12 py-6 rounded-3xl font-black text-xl shadow-lg">ZAKOŃCZ</button>
-            </div>
-        </transition>
-
-    </div>
-
-    <script>
-        const { createApp } = Vue;
-        createApp({
-            data() {
-                return {
-                    screen: 'welcome',
-                    orderOption: '',
-                    activeCategory: 'burgery',
-                    cart: [],
-                    categories: [
-                        { id: 'burgery', name: 'Burgery', icon: 'fas fa-hamburger' },
-                        { id: 'dodatki', name: 'Dodatki', icon: 'fas fa-pepper-hot' },
-                        { id: 'napoje', name: 'Napoje', icon: 'fas fa-glass-water' }
-                    ],
-                    products: [
-                        { id: 1, category: 'burgery', name: 'Double Sara', price: 29.90, icon: 'fas fa-burger' },
-                        { id: 2, category: 'burgery', name: 'Classic One', price: 19.00, icon: 'fas fa-cheese' },
-                        { id: 3, category: 'dodatki', name: 'Frytki', price: 12.00, icon: 'fas fa-box-tissue' },
-                        { id: 4, category: 'napoje', name: 'Cola', price: 8.50, icon: 'fas fa-wine-glass' }
-                    ]
-                }
-            },
-            computed: {
-                filteredProducts() { return this.products.filter(p => p.category === this.activeCategory); },
-                cartCount() { return this.cart.length; },
-                cartTotal() { return this.cart.reduce((s, i) => s + i.price, 0); }
-            },
-            methods: {
-                speak(text) {
-                    const msg = new SpeechSynthesisUtterance(text);
-                    msg.lang = 'pl-PL';
-                    window.speechSynthesis.speak(msg);
-                },
-                nextStep(step) {
-                    this.screen = step;
-                    if(step === 'selection') this.speak('Dzień dobry. Wybierz miejsce posiłku.');
-                },
-                setOption(type, val) {
-                    this.orderOption = val;
-                    this.screen = 'card_prompt';
-                    this.speak('Czy posiadasz kartę Fast Food?');
-                },
-                addToCart(p) {
-                    this.cart.push(p);
-                },
-                confirmPayment() {
-                    this.screen = 'success';
-                    this.speak('Dziękujemy. Płatność SARA Pay została zaakceptowana. Odbierz numerek i smacznego!');
-                },
-                resetKiosk() {
-                    this.cart = [];
-                    this.screen = 'welcome';
-                    this.orderOption = '';
-                }
-            }
-        }).mount('#app');
-    </script>
-</body>
-</html>
+        <div v-if="screen === 'cash_game'" class="fixed inset-0 z-[120] bg-zinc-900 flex flex-col items-center p-10">
+            <h2 class="text-white text-3xl font-black mb-10 text-center
